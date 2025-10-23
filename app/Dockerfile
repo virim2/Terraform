@@ -1,5 +1,5 @@
 # app/Dockerfile
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 LABEL maintainer="docente@example.org"
 
@@ -9,6 +9,8 @@ ENV PYTHONUNBUFFERED=1
 # instalar utilidades mínimas
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    default-libmysqlclient-dev \
+    pkg-config \
     curl \
     bash \
   && rm -rf /var/lib/apt/lists/*
@@ -18,20 +20,22 @@ RUN useradd --create-home --shell /bin/bash appuser
 
 # usar /app como WORKDIR para coincidir con docker-compose si usas ambos enfoques
 WORKDIR /app
+
+# Copiar requirements (para cache de Docker)
+COPY --chown=appuser:appuser requirements.txt .
+
+# Instalar dependencias de Python
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar el resto de la aplicación
+COPY --chown=appuser:appuser . .
+
+# Dar permisos de ejecución
+RUN chmod +x entrypoint.sh wait_for_db.py
+
 USER appuser
-
-# copiar requirements e instalar
-COPY --chown=appuser:appuser requirements.txt /app/
-RUN python -m pip install --upgrade pip
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-# copiar el codigo de la app
-COPY --chown=appuser:appuser . /app
-
-# permisos ejecutables (si se añadieron scripts)
-RUN chmod +x /app/entrypoint.sh /app/wait_for_db.py || true
 
 EXPOSE 5000
 
 CMD ["./entrypoint.sh"]
-
