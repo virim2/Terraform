@@ -53,6 +53,14 @@ resource "docker_container" "mysql" {
     container_path = "/var/lib/mysql"
   }
 
+  # Volumen para scripts de inicialización
+  volumes {
+    host_path      = abspath("./db/init.sql")
+    container_path = "/docker-entrypoint-initdb.d/init.sql"
+   
+  }
+
+
   networks_advanced {
     name = docker_network.lab_net.name
   }
