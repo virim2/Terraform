@@ -23,3 +23,12 @@ variable "secret_key" {
   default = "s3cr3t-k3y-fl4sk-2025"
 }
 
+variable "redis_host" {
+  type    = string
+  default = "redis"
+}
+
+variable "redis_port" {
+  type    = number
+  default = 6379
+}

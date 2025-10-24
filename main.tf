@@ -80,7 +80,10 @@ resource "docker_container" "flask" {
     "MYSQL_PORT=3306",
     "MYSQL_USER=${var.mysql_user}",
     "MYSQL_PASSWORD=${var.mysql_password}",
-    "MYSQL_DATABASE=${var.mysql_database}"
+    "MYSQL_DATABASE=${var.mysql_database}",
+    # Nuevas variables de Redis
+    "REDIS_HOST=${docker_container.redis.name}",
+    "REDIS_PORT=6379"
   ]
 
   ports {
@@ -91,8 +94,26 @@ resource "docker_container" "flask" {
   networks_advanced {
     name = docker_network.lab_net.name
   }
-
-  depends_on = [docker_container.mysql]
-  # restart = "unless-stopped"   # opcional
+  
+  depends_on = [docker_container.mysql, docker_container.redis]
 }
 
+
+
+
+# Contenedor Redis
+resource "docker_container" "redis" {
+  name  = "lab_redis"
+  image = "redis:latest"
+
+  ports {
+    internal = 6379
+    external = 6379
+  }
+
+  networks_advanced {
+    name = docker_network.lab_net.name
+  }
+
+  restart = "unless-stopped"
+}
