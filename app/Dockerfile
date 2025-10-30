@@ -27,6 +27,7 @@ COPY --chown=appuser:appuser requirements.txt .
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install pytest pylint
 
 # Copiar el resto de la aplicación
 COPY --chown=appuser:appuser . .

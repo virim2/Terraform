@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  test-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - test-network
+
+  test-redis:
+    image: redis:7-alpine
+    networks:
+      - test-network
+
+  test-web:
+    build: ./app
+    environment:
+      MYSQL_HOST: test-mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+      MYSQL_DATABASE: appdb
+      REDIS_HOST: test-redis
+      REDIS_PORT: 6379
+      SECRET_KEY: "test_key"
+    depends_on:
+      - test-mysql
+      - test-redis
+    networks:
+      - test-network
+    command: >
+      sh -c "python wait_for_db.py --host test-mysql --port 3306 --user appuser --password apppassword --database appdb --timeout 30 &&
+             python -m pytest tests/ -v"
+
+networks:
+  test-network:
+    driver: bridge

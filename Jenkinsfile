@@ -1,91 +1,71 @@
 pipeline {
     agent any
+    
     environment {
-        DOCKER_REGISTRY = 'localhost:5000'
-        APP_NAME = 'flask-app'
-        TERRAFORM_DIR = './terraform'
-        APP_DIR = './app'
+        DOCKER_HOST = "unix:///var/run/docker.sock"
     }
+    
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', 
-                url: 'https://github.com/ingivangaleno-reyes/Terraform.git'
-                echo '✅ Código descargado correctamente'
+                git branch: 'main', url: 'https://github.com/tu-usuario/tu-repo-flask.git'
+                sh 'ls -la'
             }
         }
         
-        stage('Build Docker Images') {
+        stage('Build') {
             steps {
-                dir(APP_DIR) {
-                    sh """
-                    docker build -t ${APP_NAME}:${BUILD_NUMBER} .
-                    docker tag ${APP_NAME}:${BUILD_NUMBER} ${APP_NAME}:latest
-                    """
+                sh 'docker-compose build'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'docker-compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-web'
+            }
+            post {
+                always {
+                    sh 'docker-compose -f docker-compose.test.yml down'
                 }
             }
         }
         
-        stage('Run Basic Tests') {
+        stage('Deploy to Dev') {
             steps {
-                sh """
-                docker run --rm ${APP_NAME}:${BUILD_NUMBER} python -c \"import flask; print('Flask import successful')\"
-                docker run --rm ${APP_NAME}:${BUILD_NUMBER} python -c \"import redis; print('Redis import successful')\"
-                docker run --rm ${APP_NAME}:${BUILD_NUMBER} python -c \"import pymysql; print('MySQL import successful')\"
-                """
-            }
-        }
-        
-        stage('Terraform Plan') {
-            steps {
-                dir(TERRAFORM_DIR) {
-                    sh 'terraform init'
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
-        
-        stage('Manual Approval') {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    input message: '¿Proceder con el deployment?', 
-                          ok: 'Deploy'
-                }
-            }
-        }
-        
-        stage('Terraform Apply') {
-            steps {
-                dir(TERRAFORM_DIR) {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
+                sh 'docker-compose down || true'
+                sh 'docker-compose up -d'
+                sh 'sleep 10'
             }
         }
         
         stage('Smoke Test') {
             steps {
-                script {
-                    // Esperar a que la aplicación esté lista
-                    sleep 30
-                    // Test básico de conectividad
-                    sh 'curl -f http://localhost:5000/ || exit 1'
-                    echo ' Aplicación desplegada correctamente'
-                }
+                sh '''
+                    curl -f http://localhost:5000/login || exit 1
+                    echo "Smoke test passed - Application is responding"
+                '''
             }
         }
     }
     
     post {
         always {
-            echo 'Pipeline completado'
-            // Limpiar contenedores temporales
-            sh 'docker system prune -f'
+            sh 'docker-compose down || true'
+            cleanWs()
         }
         success {
-            echo ' Pipeline exitoso'
+            emailext (
+                subject: "✅ Pipeline EXITOSO: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "El pipeline se completó exitosamente.\nURL: ${env.BUILD_URL}",
+                to: "tu-email@dominio.com"
+            )
         }
         failure {
-            echo ' Pipeline falló'
+            emailext (
+                subject: "❌ Pipeline FALLIDO: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                body: "El pipeline ha fallado. Revisar logs.\nURL: ${env.BUILD_URL}",
+                to: "tu-email@dominio.com"
+            )
         }
     }
 }
