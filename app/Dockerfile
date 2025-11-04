@@ -36,7 +36,7 @@ COPY --chown=appuser:appuser . .
 RUN chmod -R 755 /app && \
     mkdir -p /app/.pytest_cache && \
     chown -R appuser:appuser /app && \
-    chmod 777 /app/.pytest_cache
+    chmod 755 /app/.pytest_cache
 
 RUN chmod +x entrypoint.sh wait_for_db.py
 
