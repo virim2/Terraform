@@ -8,8 +8,8 @@ services:
       MYSQL_DATABASE: appdb
       MYSQL_USER: appuser
       MYSQL_PASSWORD: apppassword
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    # volumes:
+    #   - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql  # COMENTAR ESTA LÍNEA
     networks:
       - test-network
 
