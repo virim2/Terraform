@@ -6,6 +6,27 @@ pipeline {
     }
     
     stages {
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+                sh '''
+                    echo "=== Verificando archivos después del checkout ==="
+                    pwd
+                    ls -la
+                    echo "=== Verificando docker-compose.test.yml ==="
+                    if [ -f "docker-compose.test.yml" ]; then
+                        echo "✅ docker-compose.test.yml encontrado"
+                        cat docker-compose.test.yml | head -20
+                    else
+                        echo "❌ ERROR: docker-compose.test.yml NO encontrado"
+                        echo "Archivos YML disponibles:"
+                        find . -name "*.yml" -o -name "*.yaml"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+        
         stage('Verify Environment') {
             steps {
                 sh '''
